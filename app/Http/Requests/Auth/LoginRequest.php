@@ -27,7 +27,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'nationality' => ['required', 'string', 'in:V,E,J'],
+            'id_number' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -41,11 +42,17 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // Concatenar nacionalidad con el número de cédula
+        $credentials = [
+            'id_number' => $this->validated()['nationality'] . '-' . $this->validated()['id_number'],
+            'password' => $this->validated()['password']
+        ];
+
+        if (! Auth::attempt($credentials, !empty($this->remember))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'id_number' => trans('auth.failed'),
             ]);
         }
 
@@ -68,7 +75,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'id_number' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -80,6 +87,9 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        $nationality = $this->validated()['nationality'] ?? 'V';
+        $idNumber = $this->validated()['id_number'] ?? '';
+        $fullId = $nationality . '-' . $idNumber;
+        return Str::transliterate(Str::lower($fullId).'|'.request()->ip());
     }
 }

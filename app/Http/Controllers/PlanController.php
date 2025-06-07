@@ -16,7 +16,7 @@ class PlanController extends Controller
         return Inertia::render('Plans/Index', [
             'plans' => Plan::active()->get()
         ], [
-            'title' => 'Lista de Planes' // Título específico para esta página
+            'title' => 'Lista de Planes'
         ]);
     }
 

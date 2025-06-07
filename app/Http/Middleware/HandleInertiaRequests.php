@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 use App\Helpers\BncHelper;
-
+use App\Models\User;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -46,7 +46,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? User::with('zone', 'plan')->find($request->user()->id) : null,
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

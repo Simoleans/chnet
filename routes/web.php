@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\TestApiController;
-use App\Http\Controllers\{PlanController};
+use App\Http\Controllers\{PlanController,UserController,ZoneController};
 use App\Helpers\BncHelper;
 
 Route::get('/', function () {
@@ -14,6 +14,13 @@ Route::post('pay-fee', [TestApiController::class, 'testApi'])->name('pay-fee');
 
 //plans
 Route::resource('plans', PlanController::class);
+
+//users
+Route::resource('users', UserController::class);
+
+//zones
+Route::resource('zones', ZoneController::class);
+
 
 Route::get('/api/bcv', function () {
     return response()->json(BncHelper::getBcvRatesCached());

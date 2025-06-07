@@ -31,7 +31,7 @@ export const useBcvStore = defineStore('bcv', () => {
     await fetchBcvRate()
   }
 
-  // Inicializar cuando se crea el store
+  // Inicializar trae el bcv
   fetchBcvRate()
 
   return {
