@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
         </div>
-        <span class="text-[18px] font-bold min-w-[70px]">
+        <span class="text-[12px] md:text-[18px] lg:text-[19px] font-bold min-w-[70px]">
             <template v-if="bcvStore.loading">
                 <span class="inline-block h-4 w-16 animate-pulse rounded bg-muted"></span>
             </template>
