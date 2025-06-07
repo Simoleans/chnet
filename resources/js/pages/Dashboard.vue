@@ -89,7 +89,18 @@ const reloadBcvRate = async () => {
                     </Dialog>
                 </div>
                 <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold mb-2">Tasa BCV</h3>
+                        <div v-if="loading" class="text-sm text-gray-500">Cargando...</div>
+                        <div v-else-if="error" class="text-sm text-red-500">{{ error }}</div>
+                        <div v-else class="space-y-2">
+                            <p class="text-2xl font-bold">{{ bcv ? `${bcv} Bs` : 'No disponible' }}</p>
+                            <p class="text-sm text-gray-500">{{ date ? `Fecha: ${date}` : '' }}</p>
+                            <Button @click="reloadBcvRate" size="sm" variant="outline" :disabled="loading">
+                                Recargar
+                            </Button>
+                        </div>
+                    </div>
                 </div>
                 <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                     <PlaceholderPattern />

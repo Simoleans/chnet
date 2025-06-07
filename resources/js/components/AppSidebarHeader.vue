@@ -2,10 +2,9 @@
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItemType } from '@/types';
-import useBcvRate from '@/composables/useBcvRate'
+import { useBcvStore } from '@/stores/bcv'
 
-
-const { bcv, loading, date } = useBcvRate()
+const bcvStore = useBcvStore()
 
 const props = withDefaults(defineProps<{
     breadcrumbs?: BreadcrumbItemType[];
@@ -26,11 +25,11 @@ const props = withDefaults(defineProps<{
             </template>
         </div>
         <span class="text-[17px] font-bold min-w-[70px]">
-            <template v-if="loading">
+            <template v-if="bcvStore.loading">
                 <span class="inline-block h-4 w-16 animate-pulse rounded bg-muted"></span>
             </template>
             <template v-else>
-                <template v-if="bcv"> {{ bcv }} Bs - {{ date }}</template>
+                <template v-if="bcvStore.bcv"> {{ bcvStore.bcv }} Bs - {{ bcvStore.date }}</template>
                 <template v-else>No disponible la tasa BCV</template>
             </template>
         </span>

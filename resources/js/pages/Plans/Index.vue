@@ -49,7 +49,7 @@
                                     ${{ getPlanProperty(plan, column.key) }}
                                 </template>
                                 <template v-else-if="column.key === 'price_bs'">
-                                    {{ formatNumber(parseFloat(getPlanProperty(plan, 'price')) * (bcv || 1)) }} Bs
+                                    {{ formatNumber(parseFloat(getPlanProperty(plan, 'price')) * (bcvStore.bcv || 1)) }} Bs
                                 </template>
                                 <template v-else>
                                     {{ getPlanProperty(plan, column.key) }}
@@ -72,10 +72,12 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Head } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
-import useBcvRate from '@/composables/useBcvRate'
 import CreatePlan from './Components/CreatePlan.vue'
 import EditPlan from './Components/EditPlan.vue'
-const { bcv } = useBcvRate()
+
+
+import { useBcvStore } from '@/stores/bcv'
+const bcvStore = useBcvStore()
 
 // Definir interfaz para los planes
 interface Plan {
