@@ -57,7 +57,7 @@ class ZoneController extends Controller
 
         Zone::create(['name' => $request->name]);
 
-        return redirect()->route('zones.index')->with('success', 'Zone created successfully.');
+        return redirect()->route('zones.index')->with('type', 'success')->with('message', 'Zona creada correctamente');
     }
 
     /**
@@ -87,7 +87,7 @@ class ZoneController extends Controller
 
         $zone->update(['name' => $request->name]);
 
-        return redirect()->route('zones.index')->with('success', 'Zone updated successfully.');
+        return redirect()->route('zones.index')->with('type', 'success')->with('message', 'Zona actualizada correctamente');
     }
 
     /**
@@ -97,6 +97,6 @@ class ZoneController extends Controller
     {
         $zone->delete();
 
-        return redirect()->route('zones.index')->with('success', 'Zone deleted successfully.');
+        return redirect()->route('zones.index')->with('type', 'success')->with('message', 'Zona eliminada correctamente');
     }
 }

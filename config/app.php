@@ -128,6 +128,7 @@ return [
         'master_key' => env('BNC_MASTER_KEY', ''),
         'base_url' => env('BNC_BASE_URL', ''),
         'phone' => env('BNC_PHONE', ''),
+        'client_id' => env('BNC_CLIENT_ID', ''),
     ],
 
 ];

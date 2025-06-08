@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 import { useForm } from '@inertiajs/vue3';
+import { useNotifications } from '@/composables/useNotifications';
+const { notify } = useNotifications();
 
 // Components
 
@@ -19,7 +22,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
 import { useBcvStore } from '@/stores/bcv';
 import { storeToRefs } from 'pinia';
 
@@ -39,12 +42,125 @@ const breadcrumbs: BreadcrumbItem[] = [
 const bcvStore = useBcvStore()
 const { bcv, date, loading, error } = storeToRefs(bcvStore)
 
+// Usar usePage para acceder a los datos del usuario
+const page = usePage()
+
+// Estados para el pago
+const paymentLoading = ref(false)
+const paymentError = ref(false)
+const showReferenceInput = ref(false)
+const referenceNumber = ref('')
+
 const payFee = () => {
     form.post(route('pay-fee'));
 }
 
 const reloadBcvRate = async () => {
     await bcvStore.$reloadBcvAmount()
+}
+
+const copyPaymentReference = () => {
+    console.log('Intentando copiar...', { bcv: bcv.value, user: page.props.auth?.user });
+
+    if (bcv.value && page.props.auth?.user?.plan?.price) {
+        const total = (parseFloat(page.props.auth.user.plan.price) * parseFloat(bcv.value)).toFixed(2);
+        const reference = `0191 12569785 ${total}`;
+
+        console.log('Referencia a copiar:', reference);
+
+        // Usar método compatible con todos los navegadores
+        const textArea = document.createElement('textarea');
+        textArea.value = reference;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            if (successful) {
+                notify({
+                    message: 'Datos bancarios copiados',
+                    type: 'success',
+                    duration: 1100,
+                });
+            } else {
+                notify({
+                    message: 'No se pudo copiar automáticamente. Copia manualmente:\n\n' + reference,
+                    type: 'error',
+                    duration: 3000,
+                });
+            }
+        } catch (err) {
+            console.error('Error al copiar:', err);
+            document.body.removeChild(textArea);
+            alert('Copia manualmente este texto:\n\n' + reference);
+        }
+    } else {
+        notify({
+            message: 'No hay datos disponibles para copiar. Verifica que tengas un plan asignado y que la tasa BCV esté cargada.',
+            type: 'error',
+            duration: 3000,
+        });
+    }
+}
+
+const checkPayment = async () => {
+    paymentLoading.value = true;
+    paymentError.value = false;
+    showReferenceInput.value = false;
+
+    try {
+        const res = await fetch('/api/bnc/history?account=01910001482101010049');
+        const json = await res.json();
+
+        if (!res.ok || !json.success) {
+            paymentError.value = true;
+            showReferenceInput.value = true;
+            notify({
+                message: 'Error al conectar con el banco. Ingrese el número de referencia manualmente.',
+                type: 'error',
+                duration: 3000,
+            });
+            throw new Error(json.error || 'Error desconocido');
+        }
+
+        // Si llegamos aquí, la conexión fue exitosa
+        notify({
+            message: 'Se conectó exitosamente con el banco',
+            type: 'success',
+            duration: 2000,
+        });
+
+    } catch (err) {
+        console.error('Error al verificar pago:', err);
+        paymentError.value = true;
+        showReferenceInput.value = true;
+    } finally {
+        paymentLoading.value = false;
+    }
+}
+
+const submitReference = () => {
+    if (referenceNumber.value.trim()) {
+        notify({
+            message: 'Número de referencia enviado correctamente',
+            type: 'success',
+            duration: 2000,
+        });
+        showReferenceInput.value = false;
+        referenceNumber.value = '';
+    } else {
+        notify({
+            message: 'Por favor ingrese un número de referencia válido',
+            type: 'error',
+            duration: 2000,
+        });
+    }
 }
 
 </script>
@@ -101,6 +217,83 @@ const reloadBcvRate = async () => {
                                     </p>
                                 </div>
                             </div>
+                        </div>
+                        <div class="mt-4" v-if="$page.props.auth.user.plan_id && bcv">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button class="w-full" size="sm">
+                                        Pagar Plan
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent class="sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>Pagar Plan</DialogTitle>
+                                        <DialogDescription>
+                                            Datos para realizar el pago de tu plan
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div class="space-y-4">
+                                        <input type="hidden" :value="$page.props.auth.user.id" />
+
+                                                                                <div class="space-y-2">
+                                            <p class="font-medium">Banco Nacional de Crédito</p>
+                                            <p class="text-sm font-bold">RIF/Cédula: 12569785</p>
+                                            <p class="text-sm">
+                                                <span class="font-medium">Monto a pagar: </span>
+                                                <span class="text-lg font-bold">
+                                                    {{ bcv && $page.props.auth.user.plan.price ?
+                                                        `${(parseFloat($page.props.auth.user.plan.price) * parseFloat(bcv)).toFixed(2)} Bs` :
+                                                        'Calculando...'
+                                                    }}
+                                                </span>
+                                            </p>
+                                                                                        <div class="mt-3 space-y-2">
+                                                <Button
+                                                    @click="copyPaymentReference"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    :disabled="!bcv || !$page.props.auth.user.plan.price"
+                                                    class="w-full"
+                                                >
+                                                    Copiar datos bancarios
+                                                </Button>
+
+                                                <Button
+                                                    @click="checkPayment"
+                                                    size="sm"
+                                                    :disabled="paymentLoading || !bcv || !$page.props.auth.user.plan.price"
+                                                    class="w-full"
+                                                >
+                                                    {{ paymentLoading ? 'Verificando...' : 'Ya pagué' }}
+                                                </Button>
+
+                                                <div v-if="showReferenceInput" class="space-y-2">
+                                                    <label class="text-sm font-medium">Número de referencia:</label>
+                                                    <div class="flex gap-2">
+                                                        <Input
+                                                            v-model="referenceNumber"
+                                                            placeholder="Ingrese el número de referencia"
+                                                            class="flex-1"
+                                                        />
+                                                        <Button
+                                                            @click="submitReference"
+                                                            size="sm"
+                                                            :disabled="!referenceNumber.trim()"
+                                                        >
+                                                            Enviar
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button variant="outline">Cerrar</Button>
+                                        </DialogClose>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     </div>
                 </div>
