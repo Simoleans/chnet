@@ -6,6 +6,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+
 
 class User extends Authenticatable
 {
@@ -29,6 +32,7 @@ class User extends Authenticatable
         'plan_id',
         'status',
         'role',
+        'credit_balance',
     ];
 
     protected $casts = [
@@ -36,10 +40,27 @@ class User extends Authenticatable
         'role' => 'integer',
     ];
 
+    //append due
+    protected $appends = ['due'];
+
+
+    public function getDueAttribute()
+    {
+        return $this->invoices()
+            ->where('status', '!=', 'paid')
+            ->sum(DB::raw('amount_due - amount_paid'));
+    }
+
     //scope active
     public function scopeActive($query)
     {
         return $query->where('status', true);
+    }
+
+    //scope not admin
+    public function scopeNotAdmin($query)
+    {
+        return $query->where('role', '!=', 1);
     }
 
     public function zone()
@@ -51,6 +72,17 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Plan::class);
     }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -74,4 +106,60 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-}
+
+    public function getCurrentInvoiceData()
+    {
+        $currentPeriod = Carbon::now()->startOfMonth();
+
+        $invoice = $this->invoices()
+            ->with(['plan', 'payments'])
+            ->where('period', $currentPeriod)
+            ->first();
+
+        if (!$this->plan) {
+            return [
+                'invoice_exists' => false,
+                'error' => 'El usuario no tiene plan asignado.'
+            ];
+        }
+
+        if (!$invoice) {
+            $previous_unpaid = $this->invoices()
+                ->where('status', '!=', 'paid')
+                ->where('period', '<', $currentPeriod)
+                ->sum(DB::raw('amount_due - amount_paid'));
+
+            $total_due = $this->plan->price + $previous_unpaid;
+
+            return [
+                'invoice_exists' => false,
+                'plan_name' => $this->plan->name,
+                'plan_price' => $this->plan->price,
+                'debt' => $previous_unpaid,
+                'total_due' => $total_due,
+            ];
+        }
+
+        return [
+            'invoice_exists' => true,
+            'invoice_id' => $invoice->id,
+            'period' => $invoice->period->format('Y-m'),
+            'status' => $invoice->status,
+            'amount_due' => $invoice->amount_due,
+            'amount_paid' => $invoice->amount_paid,
+            'pending_amount' => $invoice->amount_due - $invoice->amount_paid,
+            'plan' => $invoice->plan->only(['id', 'name', 'price', 'mbps', 'type']),
+            'payments' => $invoice->payments->map(function ($p) {
+                return [
+                    'amount' => $p->amount,
+                    'bank' => $p->bank,
+                    'phone' => $p->phone,
+                    'payment_date' => $p->payment_date->format('Y-m-d'),
+                ];
+            }),
+            'is_paid' => $invoice->is_paid,
+            'is_partial' => $invoice->is_partial,
+            'is_pending' => $invoice->is_pending,
+        ];
+    }
+    }

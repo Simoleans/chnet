@@ -4,6 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
+import ReportPaymentModal from '../components/ReportPaymentModal.vue';
 import { useForm } from '@inertiajs/vue3';
 import { useNotifications } from '@/composables/useNotifications';
 const { notify } = useNotifications();
@@ -50,6 +51,9 @@ const paymentLoading = ref(false)
 const paymentError = ref(false)
 const showReferenceInput = ref(false)
 const referenceNumber = ref('')
+
+// Estado para el modal de reportar pago
+const showReportPaymentModal = ref(false)
 
 const payFee = () => {
     form.post(route('pay-fee'));
@@ -219,12 +223,13 @@ const submitReference = () => {
                             </div>
                         </div>
                         <div class="mt-4" v-if="$page.props.auth.user.plan_id && bcv">
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button class="w-full" size="sm">
-                                        Pagar Plan
-                                    </Button>
-                                </DialogTrigger>
+                            <div class="flex gap-2">
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button class="flex-1" size="sm">
+                                            Pagar Plan
+                                        </Button>
+                                    </DialogTrigger>
                                 <DialogContent class="sm:max-w-md">
                                     <DialogHeader>
                                         <DialogTitle>Pagar Plan</DialogTitle>
@@ -235,7 +240,7 @@ const submitReference = () => {
                                     <div class="space-y-4">
                                         <input type="hidden" :value="$page.props.auth.user.id" />
 
-                                                                                <div class="space-y-2">
+                                        <div class="space-y-2">
                                             <p class="font-medium">Banco Nacional de Crédito</p>
                                             <p class="text-sm font-bold">RIF/Cédula: 12569785</p>
                                             <p class="text-sm">
@@ -294,19 +299,54 @@ const submitReference = () => {
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
+
+                            <Button
+                                @click="showReportPaymentModal = true"
+                                class="flex-1"
+                                size="sm"
+                                variant="outline"
+                            >
+                                Reportar pago
+                            </Button>
+                        </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tercera Tarjeta -->
                 <div class="relative min-h-[200px] overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
+                    <!-- <PlaceholderPattern /> -->
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold mb-2">Mi Abonado CHNET</h3>
+                        <div class="space-y-2">
+                            <p class="text-2xl font-bold">{{ $page.props.auth.user.code }}</p>
+                            <div class="space-y-1">
+                                <p class="text-sm text-gray-500">
+                                    <span class="font-medium">Zona:</span>
+                                    {{ $page.props.auth.user.zone.name }}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    <span class="font-medium">Dirección:</span>
+                                    {{ $page.props.auth.user.address }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border md:min-h-min">
                 <PlaceholderPattern />
-                <!-- <pre>{{ $page.props.auth.user}}</pre> -->
+                <pre>{{ $page.props.auth.user}}</pre>
             </div>
         </div>
+
+        <!-- Modal para reportar pago -->
+        <ReportPaymentModal
+            v-model:open="showReportPaymentModal"
+            :plan-price="bcv && $page.props.auth.user?.plan?.price ?
+                (parseFloat($page.props.auth.user.plan.price) * parseFloat(bcv)).toFixed(2) :
+                '0'"
+            :user-id="$page.props.auth.user?.id"
+        />
     </AppLayout>
 </template>

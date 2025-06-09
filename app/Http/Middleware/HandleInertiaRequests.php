@@ -46,7 +46,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user() ? User::with('zone', 'plan')->find($request->user()->id) : null,
+                'user' => $request->user() ? User::with('zone', 'plan', 'invoices')->find($request->user()->id) : null,
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

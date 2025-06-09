@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\TestApiController;
-use App\Http\Controllers\{PlanController,UserController,ZoneController};
+use App\Http\Controllers\{PlanController,UserController,ZoneController,PaymentController};
 use App\Helpers\BncHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +22,9 @@ Route::resource('users', UserController::class);
 
 //zones
 Route::resource('zones', ZoneController::class);
+
+//payments
+Route::resource('payments', PaymentController::class)->middleware('auth');
 
 
 Route::get('/api/bcv', function () {
