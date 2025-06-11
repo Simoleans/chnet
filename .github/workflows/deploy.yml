@@ -1,0 +1,73 @@
+name: 🚀 Full Deploy Laravel (CHNET INTRANET)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy CHNET INTRANET
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install PHP dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+
+      - name: Build frontend assets
+        run: |
+          npm install
+          npm run build
+
+      - name: Upload Laravel Core to app-panel
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: fftp.chnet.com.ve
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: /app-panel/
+          exclude: |
+            **/node_modules/**
+            **/vendor/**
+            **/public/build/**
+            **/tests/**
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
+            **/.git/**
+            **/.github/**
+            vite.config.js
+            webpack.mix.js
+            tailwind.config.js
+            yarn.lock
+            package-lock.json
+            package.json
+            deploy.php
+
+      - name: Upload Vite build to app-panel/public/build
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: fftp.chnet.com.ve
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./public/build/
+          server-dir: /app-panel/public/build/
+
+      - name: Upload Vite build to panel.chnet.com.ve/build
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: fftp.chnet.com.ve
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./public/build/
+          server-dir: /panel.chnet.com.ve/build/
+
+      - name: Ejecutar deploy.php con clave
+        run: |
+          curl -s "https://panel.chnet.com.ve/deploy.php?key=${{ secrets.DEPLOY_SECRET_KEY }}"
