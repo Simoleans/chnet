@@ -26,7 +26,7 @@ jobs:
       - name: Upload Laravel Core to app-panel
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: fftp.chnet.com.ve
+          server: ftp.chnet.com.ve
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./
@@ -53,7 +53,7 @@ jobs:
       - name: Upload Vite build to app-panel/public/build
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: fftp.chnet.com.ve
+          server: ftp.chnet.com.ve
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./public/build/
@@ -62,7 +62,7 @@ jobs:
       - name: Upload Vite build to panel.chnet.com.ve/build
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: fftp.chnet.com.ve
+          server: ftp.chnet.com.ve
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./public/build/
