@@ -59,7 +59,7 @@ jobs:
           local-dir: ./public/build/
           server-dir: /app-panel/public/build/
 
-      - name: Upload Vite build to panel.chnet.com.ve/build
+      - name: Upload Vite build to build folder of panel.chnet.com.ve
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ftp.chnet.com.ve
@@ -67,6 +67,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./public/build/
           server-dir: panel.chnet.com.ve/build/
+
 
       - name: Ejecutar deploy.php con clave
         run: |
