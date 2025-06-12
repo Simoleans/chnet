@@ -47,6 +47,8 @@ class GenerateMonthlyInvoices extends Command
                 'status'      => 'pending',
             ]);
 
+
+
             /* 5. Registrar el pago automático por crédito */
             if ($creditUsed > 0) {
                 Payment::create([
