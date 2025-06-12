@@ -72,3 +72,5 @@ jobs:
       - name: Ejecutar deploy.php con clave
         run: |
           curl -s "https://panel.chnet.com.ve/deploy.php?key=${{ secrets.DEPLOY_SECRET_KEY }}"
+
+
