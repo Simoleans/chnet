@@ -7,7 +7,7 @@ chdir(__DIR__);
 
 // Ejecutar composer install
 echo "Ejecutando composer install...\n";
-exec('export COMPOSER_HOME=/tmp && epa-php82 /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1', $composerOutput);
+exec('export COMPOSER_HOME=/tmp && ea-php82 /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1', $composerOutput);
 
 
 echo implode("\n", $composerOutput);
