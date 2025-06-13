@@ -32,8 +32,8 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" href="https://chnet.com.ve/wp-content/uploads/2024/04/cropped-favicon-192x192.jpg" sizes="any">
+        <link rel="icon" href="https://chnet.com.ve/wp-content/uploads/2024/04/cropped-favicon-192x192.jpg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
