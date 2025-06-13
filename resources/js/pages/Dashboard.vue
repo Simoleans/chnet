@@ -75,9 +75,7 @@ const copyPaymentReference = async () => {
             Banco: 0191
             RIF: J125697857
             Teléfono: 04120355541
-            Monto: ${total} Bs
-
-            PRecio BCV: ${bcv.value} Bs/$`;
+            Monto: ${total} Bs`;
 
         console.log('Datos a copiar:', bankingData);
 
