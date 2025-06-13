@@ -20,12 +20,12 @@ defineProps<{
                 <img src="/img/logo.png" alt="Logo" class="mr-2  w-[20%] fill-current text-white" />
                 <!-- {{ name }} -->
             </Link>
-            <div v-if="quote" class="relative z-20 mt-auto">
+            <!-- <div v-if="quote" class="relative z-20 mt-auto">
                 <blockquote class="space-y-2">
                     <p class="text-lg">&ldquo;{{ quote.message }}&rdquo;</p>
                     <footer class="text-sm text-neutral-300">{{ quote.author }}</footer>
                 </blockquote>
-            </div>
+            </div> -->
         </div>
         <div class="lg:p-8">
             <div class="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
