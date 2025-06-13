@@ -70,14 +70,14 @@ const copyPaymentReference = async () => {
         const total = (parseFloat(page.props.auth.user.plan.price) * parseFloat(bcv.value)).toFixed(2);
 
         // Formato mejorado de los datos bancarios
-        const bankingData = `📧 CHNET - Datos para Pago
+        const bankingData = `📧 CHNET - Datos para Pago Movil
 
-Banco: 0191
-RIF: J125697857
-Teléfono: 04120355541
-Monto: ${total} Bs
+            Banco: 0191
+            RIF: J125697857
+            Teléfono: 04120355541
+            Monto: ${total} Bs
 
-PRecio BCV: ${bcv.value} Bs/$`;
+            PRecio BCV: ${bcv.value} Bs/$`;
 
         console.log('Datos a copiar:', bankingData);
 
@@ -86,9 +86,9 @@ PRecio BCV: ${bcv.value} Bs/$`;
             if (navigator.clipboard && window.isSecureContext) {
                 await navigator.clipboard.writeText(bankingData);
                 notify({
-                    message: '✅ Datos bancarios copiados al portapapeles',
+                    message: 'Datos copiados correctamente',
                     type: 'success',
-                    duration: 2000,
+                    duration: 1500,
                 });
             } else {
                 // Fallback para navegadores que no soportan clipboard API
