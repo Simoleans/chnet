@@ -336,7 +336,7 @@ const submitReference = () => {
             </div>
             <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border md:min-h-min">
                 <PlaceholderPattern />
-                <pre>{{ $page.props.auth.user}}</pre>
+                <!-- <pre>{{ $page.props.auth.user}}</pre> -->
             </div>
         </div>
 
