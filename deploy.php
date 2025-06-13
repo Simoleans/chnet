@@ -14,20 +14,20 @@ echo implode("\n", $composerOutput);
 
 // Limpiar cachés
 echo "Limpiando cachés...\n";
-exec('epa-php82 artisan config:clear 2>&1');
-exec('epa-php82 artisan route:clear 2>&1');
-exec('epa-php82 artisan view:clear 2>&1');
-exec('epa-php82 artisan cache:clear 2>&1');
+exec('ea-php82 artisan config:clear 2>&1');
+exec('ea-php82 artisan route:clear 2>&1');
+exec('ea-php82 artisan view:clear 2>&1');
+exec('ea-php82 artisan cache:clear 2>&1');
 
 // Recompilar cachés
 echo "🧠 Recompilando cachés...\n";
-exec('epa-php82 artisan config:cache 2>&1');
-exec('epa-php82 artisan route:cache 2>&1');
-exec('epa-php82 artisan view:cache 2>&1');
+exec('ea-php82 artisan config:cache 2>&1');
+exec('ea-php82 artisan route:cache 2>&1');
+exec('ea-php82 artisan view:cache 2>&1');
 
 // Ejecutar migraciones
 echo "🛠 Ejecutando migraciones...\n";
-exec('epa-php82 artisan migrate --force 2>&1', $migrateOutput);
+exec('ea-php82 artisan migrate --force 2>&1', $migrateOutput);
 echo implode("\n", $migrateOutput);
 
 echo "✅ Deploy completado correctamente.\n";
