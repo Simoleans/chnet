@@ -63,50 +63,80 @@ const reloadBcvRate = async () => {
     await bcvStore.$reloadBcvAmount()
 }
 
-const copyPaymentReference = () => {
+const copyPaymentReference = async () => {
     console.log('Intentando copiar...', { bcv: bcv.value, user: page.props.auth?.user });
 
     if (bcv.value && page.props.auth?.user?.plan?.price) {
         const total = (parseFloat(page.props.auth.user.plan.price) * parseFloat(bcv.value)).toFixed(2);
-        const reference = `0191 12569785 ${total}`;
 
-        console.log('Referencia a copiar:', reference);
+        // Formato mejorado de los datos bancarios
+        const bankingData = `📧 CHNET - Datos para Pago
 
-        // Usar método compatible con todos los navegadores
-        const textArea = document.createElement('textarea');
-        textArea.value = reference;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        textArea.style.top = '0';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
+Banco: 0191
+RIF: J125697857
+Teléfono: 04120355541
+Monto: ${total} Bs
+
+PRecio BCV: ${bcv.value} Bs/$`;
+
+        console.log('Datos a copiar:', bankingData);
 
         try {
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            if (successful) {
+            // Intentar usar la API moderna del Clipboard
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(bankingData);
                 notify({
-                    message: 'Datos bancarios copiados',
+                    message: '✅ Datos bancarios copiados al portapapeles',
                     type: 'success',
-                    duration: 1100,
+                    duration: 2000,
                 });
             } else {
-                notify({
-                    message: 'No se pudo copiar automáticamente. Copia manualmente:\n\n' + reference,
-                    type: 'error',
-                    duration: 3000,
-                });
+                // Fallback para navegadores que no soportan clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = bankingData;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                textArea.style.top = '0';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                if (successful) {
+                    notify({
+                        message: '✅ Datos bancarios copiados (método compatible)',
+                        type: 'success',
+                        duration: 2000,
+                    });
+                } else {
+                    throw new Error('Método de copia no disponible');
+                }
             }
         } catch (err) {
             console.error('Error al copiar:', err);
-            document.body.removeChild(textArea);
-            alert('Copia manualmente este texto:\n\n' + reference);
+
+            // Mostrar modal con los datos para copiar manualmente
+            notify({
+                message: '⚠️ No se pudo copiar automáticamente. Revisa la consola para copiar manualmente.',
+                type: 'error',
+                duration: 4000,
+            });
+
+            // Log los datos en consola para que el usuario pueda copiarlos
+            console.log('📋 COPIA ESTOS DATOS MANUALMENTE:');
+            console.log('=====================================');
+            console.log(bankingData);
+            console.log('=====================================');
+
+            // También mostrar un alert como último recurso
+            alert(`No se pudo copiar automáticamente. Copia estos datos manualmente:\n\n${bankingData}`);
         }
     } else {
         notify({
-            message: 'No hay datos disponibles para copiar. Verifica que tengas un plan asignado y que la tasa BCV esté cargada.',
+            message: '❌ No hay datos disponibles para copiar. Verifica que tengas un plan asignado y que la tasa BCV esté cargada.',
             type: 'error',
             duration: 3000,
         });
@@ -241,10 +271,12 @@ const submitReference = () => {
                                         <input type="hidden" :value="$page.props.auth.user.id" />
 
                                         <div class="space-y-2">
-                                            <p class="font-medium">Banco Nacional de Crédito</p>
-                                            <p class="text-sm font-bold">RIF/Cédula: 12569785</p>
+                                            <p class="font-medium">🏦 Banco Nacional de Crédito</p>
+                                            <!-- <p class="text-sm"><span class="font-medium">💳 Cuenta:</span> 0191-0001-48-2101010049</p> -->
+                                            <p class="text-sm"><span class="font-medium">👤 RIF:</span> J-12569785-7</p>
+                                            <p class="text-sm"><span class="font-medium">📞 Teléfono:</span> 0412-0355541</p>
                                             <p class="text-sm">
-                                                <span class="font-medium">Monto a pagar: </span>
+                                                <span class="font-medium">💰 Monto a pagar: </span>
                                                 <span class="text-lg font-bold">
                                                     {{ bcv && $page.props.auth.user.plan.price ?
                                                         `${(parseFloat($page.props.auth.user.plan.price) * parseFloat(bcv)).toFixed(2)} Bs` :
