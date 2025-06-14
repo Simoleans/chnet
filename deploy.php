@@ -9,7 +9,7 @@ chdir(__DIR__);
 exec('which php', $which);
 exec('which composer', $which);
 $php = $which[0] ?? 'php';
-$composer = $which[1] ?? 'composer';
+$composer = $which[0] ?? 'composer';
 echo "PHP encontrado: $php\n";
 echo "Composer encontrado: $composer\n";
 
