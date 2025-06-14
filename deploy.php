@@ -31,4 +31,6 @@ exec('ea-php82 artisan migrate --force 2>&1', $migrateOutput);
 echo implode("\n", $migrateOutput);
 
 echo "✅ Deploy completado correctamente.\n";
+
+
 ?>
