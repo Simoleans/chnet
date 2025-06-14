@@ -3,7 +3,7 @@
 echo "🚀 Iniciando deploy...\n";
 
 // Establecer directorio de trabajo en chnet
-chdir(__DIR__);
+chdir(__DIR__.'/app-panel');
 
 // Ejecutar composer install
 echo "Ejecutando composer install...\n";
