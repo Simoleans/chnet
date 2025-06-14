@@ -7,9 +7,9 @@ chdir(__DIR__);
 
 // Detectar PHP disponible
 exec('which php', $which);
-exec('which composer', $which);
+exec('which composer', $whichComposer);
 $php = $which[0] ?? 'php';
-$composer = $which[0] ?? 'composer';
+$composer = $whichComposer[0] ?? 'composer';
 echo "PHP encontrado: $php\n";
 echo "Composer encontrado: $composer\n";
 
