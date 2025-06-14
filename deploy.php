@@ -9,14 +9,14 @@ chdir(__DIR__);
 exec('which php', $which);
 exec('which composer', $whichComposer);
 $php = $which[0] ?? 'php';
-$composer = $whichComposer[0] ?? 'composer';
+//$composer = $whichComposer[0] ?? 'composer';
 echo "PHP encontrado: $php\n";
-echo "Composer encontrado: $composer\n";
+//cho "Composer encontrado: $composer\n";
 
 // Ejecutar composer install
-echo "Ejecutando composer install...\n";
+/* echo "Ejecutando composer install...\n";
 exec("export COMPOSER_HOME=/tmp && $composer install --no-dev --optimize-autoloader 2>&1", $composerOutput);
-echo implode("\n", $composerOutput);
+echo implode("\n", $composerOutput); */
 
 // Limpiar cachés
 echo "🧹 Limpiando cachés...\n";
