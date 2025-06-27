@@ -7,7 +7,9 @@ use App\Http\Controllers\{PlanController,UserController,ZoneController,PaymentCo
 use App\Helpers\BncHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-
+/* use App\Http\Controllers\ProfileController;
+use Illuminate\Foundation\Application;
+ */
 Route::get('/', function () {
     return Inertia::render('auth/Login');
 })->name('home');
@@ -63,9 +65,7 @@ Route::get('/api/bnc/history', function (Request $request) {
     }
 });
 
-
-
-
+Route::get('/api/bnc/validate-reference/{reference}', [PaymentController::class, 'validateReference'])->middleware(['auth']);
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');

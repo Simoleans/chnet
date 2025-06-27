@@ -174,6 +174,53 @@ class BncHelper
         return null;
     }
 
+    public static function validateOperationReference(string $reference, string $dateMovement, float $expectedAmount): ?array
+    {
+        try {
+            $key = self::getWorkingKey();
+            $clientId = config('app.bnc.client_id');
+            $account = config('app.bnc.account');
+
+            $body = array_filter([
+                'ClientID' => $clientId,
+                'AccountNumber' => $account,
+                'Reference' => $reference,
+                'Amount' => $expectedAmount,
+                'DateMovement' => $dateMovement,
+                'ChildClientID' => '',
+                'BranchID' => '',
+            ], fn($v) => !is_null($v));
+
+            Log::info('BNC VALIDACIÓN REF 📤 Enviando (desencriptado): ' . json_encode($body, JSON_PRETTY_PRINT));
+
+            $response = BncApiService::send('Position/Validate', $body);
+
+            if (in_array($response->status(), [200, 202])) {
+                $json = $response->json();
+
+                if (!isset($json['value'])) {
+                    Log::error('BNC VALIDACIÓN REF ❌ Respuesta sin campo "value": ' . json_encode($json));
+                    return null;
+                }
+
+                $decrypted = BncCryptoHelper::decryptAES($json['value'], $key);
+                Log::info('BNC VALIDACIÓN REF ✅ Éxito (desencriptado): ' . json_encode($decrypted, JSON_PRETTY_PRINT));
+
+                return $decrypted;
+            }
+
+            Log::error('BNC VALIDACIÓN REF ❌ Error HTTP: ' . $response->status() . ' — Body: ' . $response->body());
+        } catch (\Throwable $e) {
+            Log::error('BNC VALIDACIÓN REF ❌ Excepción: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+        }
+
+        return null;
+    }
+
+
+
+
 
 
 

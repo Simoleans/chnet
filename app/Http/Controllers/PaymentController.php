@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Helpers\BncHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -191,5 +192,65 @@ class PaymentController extends Controller
     public function destroy(Payment $payment)
     {
         //
+    }
+
+    /**
+     * Valida una referencia de pago con el banco
+     */
+    public function validateReference(Request $request, string $reference)
+    {
+        try {
+            // Validar que la fecha de movimiento y monto sean proporcionados
+            $request->validate([
+                'payment_date' => 'required|date_format:Y-m-d',
+                'expected_amount' => 'required|numeric|min:0.01',
+            ]);
+
+            $result = BncHelper::validateOperationReference(
+                $reference,
+                $request->payment_date,
+                $request->expected_amount
+            );
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'showReportLink' => true,
+                    'message' => 'No se pudo validar la referencia con el banco. ¿Desea reportar su pago manualmente?'
+                ]);
+            }
+
+            // Validar si el movimiento existe
+            if (!$result['MovementExists']) {
+                return response()->json([
+                    'success' => false,
+                    'showReportLink' => true,
+                    'message' => 'No se encontró ningún pago con esta referencia. ¿Desea reportar su pago manualmente?'
+                ]);
+            }
+
+            // Si el movimiento existe, validar que el monto sea correcto (con un margen de error de 0.01)
+            $amountDiff = abs($result['Amount'] - $request->expected_amount);
+            if ($amountDiff > 0.01) {
+                return response()->json([
+                    'success' => false,
+                    'showReportLink' => true,
+                    'message' => 'El monto del pago no coincide con el esperado. ¿Desea reportar su pago manualmente?'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+                'message' => 'Pago validado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('LOG:: Error validando referencia BNC: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al validar la referencia'
+            ], 500);
+        }
     }
 }

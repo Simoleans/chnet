@@ -7,6 +7,7 @@ import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 import ReportPaymentModal from '../components/ReportPaymentModal.vue';
 import { useForm } from '@inertiajs/vue3';
 import { useNotifications } from '@/composables/useNotifications';
+import axios from 'axios';
 const { notify } = useNotifications();
 
 // Components
@@ -51,9 +52,15 @@ const paymentLoading = ref(false)
 const paymentError = ref(false)
 const showReferenceInput = ref(false)
 const referenceNumber = ref('')
+const paymentDate = ref('')
+const paymentAmount = ref('')
+const showReportLink = ref(false)
 
 // Estado para el modal de reportar pago
 const showReportPaymentModal = ref(false)
+
+// Estado para el modal de pagar plan
+const showPaymentModal = ref(false)
 
 const payFee = () => {
     form.post(route('pay-fee'));
@@ -141,51 +148,79 @@ const copyPaymentReference = async () => {
     }
 }
 
+const handleReportManually = () => {
+    showPaymentModal.value = false;
+    showReportPaymentModal.value = true;
+}
+
 const checkPayment = async () => {
     paymentLoading.value = true;
     paymentError.value = false;
-    showReferenceInput.value = false;
+    showReferenceInput.value = true;
+    showReportLink.value = false;
+
+    // Si no hay fecha, usar la fecha actual
+    if (!paymentDate.value) {
+        const today = new Date();
+        paymentDate.value = today.toISOString().split('T')[0];
+    }
+
+    // Si no hay monto, usar el del plan
+    if (!paymentAmount.value && bcv.value && $page.props.auth?.user?.plan?.price) {
+        paymentAmount.value = (parseFloat($page.props.auth.user.plan.price) * parseFloat(bcv.value)).toFixed(2);
+    }
 
     try {
-        const res = await fetch('/api/bnc/history?account=01910001482101010049');
-        const json = await res.json();
+        if (referenceNumber.value.trim()) {
+            console.log('LOG:: Validando referencia:', referenceNumber.value);
+            console.log('LOG:: Fecha de pago:', paymentDate.value);
+            console.log('LOG:: Monto esperado:', paymentAmount.value);
 
-        if (!res.ok || !json.success) {
-            paymentError.value = true;
-            showReferenceInput.value = true;
-            notify({
-                message: 'Error al conectar con el banco. Ingrese el número de referencia manualmente.',
-                type: 'error',
-                duration: 3000,
+            const res = await axios.get(`/api/bnc/validate-reference/${referenceNumber.value}`, {
+                params: {
+                    payment_date: paymentDate.value,
+                    expected_amount: parseFloat(paymentAmount.value)
+                }
             });
-            throw new Error(json.error || 'Error desconocido');
+
+            console.log('LOG:: Respuesta de validación:', res.data);
+
+            if (res.data.success) {
+                notify({
+                    message: res.data.message,
+                    type: 'success',
+                    duration: 2000,
+                });
+                showReferenceInput.value = false;
+                referenceNumber.value = '';
+                paymentDate.value = '';
+                paymentAmount.value = '';
+                showPaymentModal.value = false;
+            } else {
+                showReportLink.value = res.data.showReportLink;
+                notify({
+                    message: res.data.message,
+                    type: 'warning',
+                    duration: 4000,
+                });
+            }
         }
-
-        // Si llegamos aquí, la conexión fue exitosa
-        notify({
-            message: 'Se conectó exitosamente con el banco',
-            type: 'success',
-            duration: 2000,
-        });
-
     } catch (err) {
-        console.error('Error al verificar pago:', err);
+        console.error('LOG:: Error al validar referencia:', err);
         paymentError.value = true;
-        showReferenceInput.value = true;
+        notify({
+            message: err.response?.data?.error || 'Error al validar la referencia. Por favor, intente nuevamente.',
+            type: 'error',
+            duration: 3000,
+        });
     } finally {
         paymentLoading.value = false;
     }
 }
 
-const submitReference = () => {
+const submitReference = async () => {
     if (referenceNumber.value.trim()) {
-        notify({
-            message: 'Número de referencia enviado correctamente',
-            type: 'success',
-            duration: 2000,
-        });
-        showReferenceInput.value = false;
-        referenceNumber.value = '';
+        await checkPayment();
     } else {
         notify({
             message: 'Por favor ingrese un número de referencia válido',
@@ -304,19 +339,44 @@ const submitReference = () => {
 
                                                 <div v-if="showReferenceInput" class="space-y-2">
                                                     <label class="text-sm font-medium">Número de referencia:</label>
-                                                    <div class="flex gap-2">
+                                                    <div class="flex gap-2 flex-col">
                                                         <Input
                                                             v-model="referenceNumber"
                                                             placeholder="Ingrese el número de referencia"
                                                             class="flex-1"
                                                         />
-                                                        <Button
-                                                            @click="submitReference"
-                                                            size="sm"
-                                                            :disabled="!referenceNumber.trim()"
-                                                        >
-                                                            Enviar
-                                                        </Button>
+                                                        <Input
+                                                            type="date"
+                                                            v-model="paymentDate"
+                                                            class="flex-1"
+                                                        />
+                                                        <Input
+                                                            type="number"
+                                                            v-model="paymentAmount"
+                                                            :placeholder="bcv && $page.props.auth?.user?.plan?.price ?
+                                                                `Monto en Bs. (Sugerido: ${(parseFloat($page.props.auth.user.plan.price) * parseFloat(bcv)).toFixed(2)})` :
+                                                                'Monto en Bs.'"
+                                                            class="flex-1"
+                                                            step="0.01"
+                                                        />
+                                                        <div class="flex items-center justify-between">
+                                                            <Button
+                                                                @click="submitReference"
+                                                                size="sm"
+                                                                :disabled="!referenceNumber.trim() || !paymentAmount || paymentAmount <= 0"
+                                                            >
+                                                                Enviar
+                                                            </Button>
+                                                            <Button
+                                                                v-if="showReportLink"
+                                                                @click="handleReportManually"
+                                                                size="sm"
+                                                                variant="link"
+                                                                class="text-blue-500 hover:text-blue-700"
+                                                            >
+                                                                Reportar pago manualmente
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
