@@ -162,4 +162,40 @@ class User extends Authenticatable
             'is_pending' => $invoice->is_pending,
         ];
     }
+
+    /**
+     * Busca un usuario por código y retorna información de deuda
+     */
+    public static function searchByCode(string $code): ?array
+    {
+        $user = self::with(['plan', 'zone'])
+            ->where('code', $code)
+            ->where('status', true)
+            ->first();
+
+        if (!$user) {
+            return null;
+        }
+
+        $invoiceData = $user->getCurrentInvoiceData();
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'code' => $user->code,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'address' => $user->address,
+            'zone' => $user->zone?->name,
+            'plan' => $user->plan ? [
+                'name' => $user->plan->name,
+                'price' => $user->plan->price,
+                'mbps' => $user->plan->mbps,
+                'type' => $user->plan->type,
+            ] : null,
+            'credit_balance' => $user->credit_balance ?? 0,
+            'total_debt' => $user->due,
+            'invoice_data' => $invoiceData,
+        ];
     }
+}

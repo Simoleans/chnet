@@ -8,6 +8,7 @@ use App\Models\Zone;
 use App\Models\Plan;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -178,8 +179,36 @@ class UserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(User $user)
     {
         //
+    }
+
+    /**
+     * Busca un usuario por código y retorna información de deuda
+     */
+    public function searchByCode(string $code)
+    {
+        try {
+            $userData = User::searchByCode($code);
+
+            if (!$userData) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró ningún usuario con ese código'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $userData
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error buscando usuario por código: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error interno del servidor'
+            ], 500);
+        }
     }
 }

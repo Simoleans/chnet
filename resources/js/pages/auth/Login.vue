@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+import QuickPaymentModal from '@/components/QuickPaymentModal.vue';
+import { ref } from 'vue';
 
 defineProps<{
     status?: string;
@@ -20,6 +22,9 @@ const form = useForm({
     password: '',
     remember: false,
 });
+
+// Estado para el modal de pago rápido
+const showQuickPaymentModal = ref(false);
 
 const submit = () => {
     form.post(route('login'), {
@@ -94,10 +99,31 @@ const submit = () => {
                     </Label>
                 </div>
 
-                <Button type="submit" class="mt-4 w-full" :tabindex="5" :disabled="form.processing">
-                    <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                    Iniciar sesión
-                </Button>
+                <div class="space-y-3">
+                    <Button type="submit" class="w-full" :tabindex="5" :disabled="form.processing">
+                        <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
+                        Iniciar sesión
+                    </Button>
+
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <span class="w-full border-t" />
+                        </div>
+                        <div class="relative flex justify-center text-xs uppercase">
+                            <span class="bg-background px-2 text-muted-foreground">O</span>
+                        </div>
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="w-full"
+                        @click="showQuickPaymentModal = true"
+                        :tabindex="6"
+                    >
+                        💳 Pago Rápido
+                    </Button>
+                </div>
             </div>
 
             <!-- <div class="text-center text-sm text-muted-foreground">
@@ -105,5 +131,8 @@ const submit = () => {
                 <TextLink :href="route('register')" :tabindex="5">Registrate</TextLink>
             </div> -->
         </form>
+
+        <!-- Modal de pago rápido -->
+        <QuickPaymentModal v-model:open="showQuickPaymentModal" />
     </AuthBase>
 </template>

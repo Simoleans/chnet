@@ -31,9 +31,13 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        $user = Auth::user();
+        // Si viene user_id, usar ese usuario; si no, usar el autenticado
+        $user = $request->has('user_id') ?
+            \App\Models\User::findOrFail($request->user_id) :
+            Auth::user();
 
         $validated = $request->validate([
+            'user_id' => 'nullable|exists:users,id',
             'reference' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0.01', // Este viene en bolívares
             'nationality' => 'required|string|in:V,E,J',
@@ -41,21 +45,27 @@ class PaymentController extends Controller
             'bank' => 'required|string|max:100',
             'phone' => 'required|string|max:20',
             'payment_date' => 'required|date',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
         ]);
+
+        // Manejar la subida de imagen
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('payment-receipts', 'public');
+        }
 
         // Concatenar nacionalidad con número de cédula
         $fullIdNumber = $validated['nationality'] . '-' . $validated['id_number'];
 
         // Obtener la tasa BCV actual
         $bcvData = BncHelper::getBcvRatesCached();
-        //dd($bcvData);
         $bcvRate = $bcvData['Rate'] ?? null;
 
         if (!$bcvRate) {
-            return redirect()->route('dashboard')->with('error', 'No se pudo obtener la tasa BCV. Intente nuevamente.');
+            return redirect()->back()->with('error', 'No se pudo obtener la tasa BCV. Intente nuevamente.');
         }
 
-                // Convertir el monto de bolívares a dólares
+        // Convertir el monto de bolívares a dólares
         $amountInUSD = $validated['amount'] / $bcvRate;
 
         // PASO 1: Registrar SIEMPRE el pago original (independientemente de facturas)
@@ -68,6 +78,7 @@ class PaymentController extends Controller
             'bank' => $validated['bank'],
             'phone' => $validated['phone'],
             'payment_date' => $validated['payment_date'],
+            'image_path' => $imagePath, // Guardar la ruta de la imagen
         ]);
 
         $remainingPayment = $amountInUSD; // Monto disponible para aplicar
@@ -103,6 +114,7 @@ class PaymentController extends Controller
                              'bank' => $validated['bank'],
                              'phone' => $validated['phone'],
                              'payment_date' => $validated['payment_date'],
+                             'image_path' => $imagePath,
                          ]);
 
                         $invoice->amount_paid += $paymentToApply;
@@ -146,20 +158,15 @@ class PaymentController extends Controller
             $message .= 'Crédito disponible: $' . number_format($remainingPayment, 2);
         }
 
-        return redirect()->route('dashboard')->with('success', $message);
+        // Si es una petición AJAX (desde el modal de pago rápido), retornar JSON
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
 
-        /* return response()->json([
-            'success' => true,
-            'message' => '✅ Pago registrado exitosamente.',
-            'data' => [
-                'original_payment_bs' => $validated['amount'],
-                'original_payment_usd' => $amountInUSD,
-                'bcv_rate_used' => $bcvRate,
-                'current_credit_balance_usd' => $finalCreditBalance,
-                'current_credit_balance_bs' => $finalCreditBalance * $bcvRate,
-                'applied_invoices' => $appliedInvoices,
-            ],
-        ]); */
+        return redirect()->route('dashboard')->with('success', $message);
     }
 
     /**

@@ -65,7 +65,9 @@ Route::get('/api/bnc/history', function (Request $request) {
     }
 });
 
-Route::get('/api/bnc/validate-reference/{reference}', [PaymentController::class, 'validateReference'])->middleware(['auth']);
+Route::get('/api/bnc/validate-reference/{reference}', [App\Http\Controllers\PaymentController::class, 'validateReference'])->middleware(['auth']);
+
+Route::get('/api/users/search/{code}', [App\Http\Controllers\UserController::class, 'searchByCode']);
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
