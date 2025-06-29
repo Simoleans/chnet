@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 
 import { useBcvStore } from '@/stores/bcv';
+import { useBanksStore } from '@/stores/banks';
 import { storeToRefs } from 'pinia';
 
 
@@ -43,6 +44,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 // Usar el store de BCV
 const bcvStore = useBcvStore()
 const { bcv, date, loading, error } = storeToRefs(bcvStore)
+
+// Usar el store de bancos
+const banksStore = useBanksStore()
+
+// Cargar bancos al montar el componente
+banksStore.loadBanks()
 
 // Usar usePage para acceder a los datos del usuario
 const page = usePage()
@@ -426,7 +433,7 @@ const submitReference = async () => {
             </div>
             <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border md:min-h-min">
                 <PlaceholderPattern />
-                <!-- <pre>{{ $page.props.auth.user}}</pre> -->
+                <pre>{{ $page.props.auth.user}}</pre>
             </div>
         </div>
 

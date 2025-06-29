@@ -218,6 +218,73 @@ class BncHelper
         return null;
     }
 
+    public static function getBanks(): ?array
+    {
+        try {
+            $key = self::getWorkingKey();
+            $clientId = config('app.bnc.client_id');
+
+            if (!$key) throw new \Exception('WorkingKey no disponible');
+
+            $body = [
+                'ClientID' => $clientId,
+                'ChildClientID' => '',
+                'BranchID' => '',
+            ];
+
+            Log::info('BNC BANCOS 📤 Enviando (desencriptado): ' . json_encode($body));
+
+            $response = BncApiService::send('Services/Banks', $body);
+
+            Log::info('BNC BANCOS 📊 Status HTTP: ' . $response->status());
+
+            if ($response->ok() || $response->status() === 202) {
+                $result = $response->json();
+
+                if (!isset($result['value'])) {
+                    Log::error('BNC BANCOS ❌ Respuesta sin campo "value": ' . json_encode($result));
+                    return null;
+                }
+
+                $decrypted = BncCryptoHelper::decryptAES($result['value'], $key);
+
+                Log::info('BNC BANCOS ✅ Éxito (desencriptado): ' . json_encode($decrypted, JSON_PRETTY_PRINT));
+
+                return $decrypted;
+            }
+
+            Log::error('BNC BANCOS ❌ Error HTTP: ' . $response->status() . ' — Body: ' . $response->body());
+        } catch (\Throwable $e) {
+            Log::error('BNC BANCOS ❌ Excepción: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+        }
+
+        return null;
+
+        /*
+        // Ejemplo de respuesta desencriptada:
+        return [
+            [
+                "Name" => "Banco Central de Venezuela",
+                "Code" => "0001",
+                "Services" => "TRF"
+            ],
+            [
+                "Name" => "Banco de Venezuela",
+                "Code" => "0102",
+                "Services" => "TRF, P2P"
+            ],
+            [
+                "Name" => "Banco Venezolano de Crédito",
+                "Code" => "0104",
+                "Services" => "TRF, P2P"
+            ],
+            // ...
+        ];
+        */
+    }
+
+
 
 
 

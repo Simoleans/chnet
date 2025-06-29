@@ -15,6 +15,11 @@ class Payment extends Model
         'phone',
         'payment_date',
         'amount',
+        'image_path',
+    ];
+
+    protected $casts = [
+        'payment_date' => 'date',
     ];
 
 

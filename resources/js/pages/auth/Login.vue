@@ -10,6 +10,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import QuickPaymentModal from '@/components/QuickPaymentModal.vue';
 import { ref } from 'vue';
+import { useBanksStore } from '@/stores/banks';
 
 defineProps<{
     status?: string;
@@ -25,6 +26,10 @@ const form = useForm({
 
 // Estado para el modal de pago rápido
 const showQuickPaymentModal = ref(false);
+
+// Cargar bancos al montar el componente
+const banksStore = useBanksStore();
+banksStore.loadBanks();
 
 const submit = () => {
     form.post(route('login'), {

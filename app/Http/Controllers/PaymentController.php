@@ -31,22 +31,33 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        // Si viene user_id, usar ese usuario; si no, usar el autenticado
-        $user = $request->has('user_id') ?
-            \App\Models\User::findOrFail($request->user_id) :
-            Auth::user();
+        try {
+            // Si viene user_id, usar ese usuario; si no, usar el autenticado (si existe)
+            if ($request->has('user_id')) {
+                $user = \App\Models\User::findOrFail($request->user_id);
+            } elseif (Auth::check()) {
+                $user = Auth::user();
+            } else {
+                Log::error('PAYMENT STORE: No hay usuario especificado ni autenticado');
 
-        $validated = $request->validate([
-            'user_id' => 'nullable|exists:users,id',
-            'reference' => 'nullable|string|max:255',
-            'amount' => 'required|numeric|min:0.01', // Este viene en bolívares
-            'nationality' => 'required|string|in:V,E,J',
-            'id_number' => 'required|string|max:20',
-            'bank' => 'required|string|max:100',
-            'phone' => 'required|string|max:20',
-            'payment_date' => 'required|date',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
-        ]);
+                if ($request->is('quick-payment')) {
+                    return back()->with('error', 'Debe especificar un usuario para el pago');
+                }
+
+                return redirect()->back()->with('error', 'Debe especificar un usuario para el pago');
+            }
+
+            $validated = $request->validate([
+                'user_id' => 'nullable|exists:users,id',
+                'reference' => 'nullable|string|max:255',
+                'amount' => 'required|numeric|min:0.01', // Este viene en bolívares
+                'nationality' => 'required|string|in:V,E,J',
+                'id_number' => 'required|string|max:20',
+                'bank' => 'required|string|max:100',
+                'phone' => 'required|string|max:20',
+                'payment_date' => 'required|date',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:4048', // 4MB max
+            ]);
 
         // Manejar la subida de imagen
         $imagePath = null;
@@ -62,6 +73,9 @@ class PaymentController extends Controller
         $bcvRate = $bcvData['Rate'] ?? null;
 
         if (!$bcvRate) {
+            if ($request->is('quick-payment')) {
+                return back()->with('error', 'No se pudo obtener la tasa BCV. Intente nuevamente.');
+            }
             return redirect()->back()->with('error', 'No se pudo obtener la tasa BCV. Intente nuevamente.');
         }
 
@@ -120,19 +134,34 @@ class PaymentController extends Controller
                         $invoice->amount_paid += $paymentToApply;
                         $remainingPayment -= $paymentToApply;
 
-                        // Actualizar estado de la factura
-                        if ($invoice->amount_paid >= $invoice->amount_due) {
-                            $invoice->amount_paid = $invoice->amount_due;
+                        // Actualizar estado de la factura con comparación robusta para decimales
+                        $amountDiff = abs($invoice->amount_paid - $invoice->amount_due);
+
+                        if ($amountDiff < 0.01 || $invoice->amount_paid >= $invoice->amount_due) {
+                            // Si la diferencia es menor a 1 centavo o está pagado completamente
+                            $invoice->amount_paid = $invoice->amount_due; // Asegurar que sea exacto
                             $invoice->status = 'paid';
+                            Log::info('PAYMENT STORE: Factura marcada como PAID', [
+                                'invoice_id' => $invoice->id,
+                                'amount_due' => $invoice->amount_due,
+                                'amount_paid' => $invoice->amount_paid,
+                                'diff' => $amountDiff
+                            ]);
                         } elseif ($invoice->amount_paid > 0) {
                             $invoice->status = 'partial';
+                            Log::info('PAYMENT STORE: Factura marcada como PARTIAL', [
+                                'invoice_id' => $invoice->id,
+                                'amount_due' => $invoice->amount_due,
+                                'amount_paid' => $invoice->amount_paid,
+                                'diff' => $amountDiff
+                            ]);
                         }
 
                         $invoice->save();
 
                         $appliedInvoices[] = [
                             'id' => $invoice->id,
-                            'period' => $invoice->period->format('Y-m'),
+                            'period' => $invoice->period ? $invoice->period->format('Y-m') : null,
                             'applied_amount_usd' => $paymentToApply,
                             'applied_amount_bs' => $paymentToApply * $bcvRate,
                             'status' => $invoice->status,
@@ -158,15 +187,26 @@ class PaymentController extends Controller
             $message .= 'Crédito disponible: $' . number_format($remainingPayment, 2);
         }
 
-        // Si es una petición AJAX (desde el modal de pago rápido), retornar JSON
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-            ]);
+        // Determinar la redirección apropiada
+        if ($request->is('quick-payment')) {
+            // Para pago rápido desde login, usar respuesta JSON compatible con Inertia
+            return back()->with('success', $message);
         }
 
         return redirect()->route('dashboard')->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('PAYMENT STORE: Error procesando pago', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($request->is('quick-payment')) {
+                return back()->with('error', 'Error al procesar el pago: ' . $e->getMessage());
+            }
+
+            return redirect()->back()->with('error', 'Error al procesar el pago: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -257,6 +297,34 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => 'Error al validar la referencia'
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtiene la lista de bancos desde el BNC
+     */
+    public function getBanks()
+    {
+        try {
+            $banks = BncHelper::getBanks();
+
+            if (!$banks) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo obtener la lista de bancos'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $banks
+            ]);
+        } catch (\Exception $e) {
+            Log::error('LOG:: Error obteniendo bancos: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al obtener la lista de bancos'
             ], 500);
         }
     }

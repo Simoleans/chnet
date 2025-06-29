@@ -46,9 +46,12 @@ class User extends Authenticatable
 
     public function getDueAttribute()
     {
-        return $this->invoices()
+        // Obtener todas las facturas no pagadas completamente
+        $invoices = $this->invoices()
             ->where('status', '!=', 'paid')
             ->sum(DB::raw('amount_due - amount_paid'));
+
+        return $invoices;
     }
 
     //scope active
@@ -143,23 +146,23 @@ class User extends Authenticatable
         return [
             'invoice_exists' => true,
             'invoice_id' => $invoice->id,
-            'period' => $invoice->period->format('Y-m'),
+            'period' => $invoice->period ? $invoice->period->format('Y-m') : null,
             'status' => $invoice->status,
             'amount_due' => $invoice->amount_due,
             'amount_paid' => $invoice->amount_paid,
             'pending_amount' => $invoice->amount_due - $invoice->amount_paid,
-            'plan' => $invoice->plan->only(['id', 'name', 'price', 'mbps', 'type']),
+            'plan' => $this->plan ? $this->plan->only(['id', 'name', 'price', 'mbps', 'type']) : null,
             'payments' => $invoice->payments->map(function ($p) {
                 return [
                     'amount' => $p->amount,
                     'bank' => $p->bank,
                     'phone' => $p->phone,
-                    'payment_date' => $p->payment_date->format('Y-m-d'),
+                    'payment_date' => $p->payment_date ? $p->payment_date->format('Y-m-d') : null,
                 ];
             }),
-            'is_paid' => $invoice->is_paid,
-            'is_partial' => $invoice->is_partial,
-            'is_pending' => $invoice->is_pending,
+            'is_paid' => $invoice->status === 'paid',
+            'is_partial' => $invoice->status === 'partial',
+            'is_pending' => $invoice->status === 'pending',
         ];
     }
 

@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { useNotifications } from '@/composables/useNotifications';
 import { useBcvStore } from '@/stores/bcv';
+import { useBanksStore } from '@/stores/banks';
 import { storeToRefs } from 'pinia';
 const { notify } = useNotifications();
 
@@ -43,7 +44,11 @@ const imageFile = ref(null);
 const bcvStore = useBcvStore();
 const { bcv } = storeToRefs(bcvStore);
 
-const form = useForm({
+// Store Bancos
+const banksStore = useBanksStore();
+const { getBankOptions } = banksStore;
+
+const paymentForm = useForm({
     user_id: '',
     reference: '',
     nationality: 'V',
@@ -73,8 +78,8 @@ const searchUser = async (code: string) => {
 
         if (data.success) {
             userData.value = data.data;
-            // Auto-llenar algunos campos
-            form.amount = calculateTotalAmount();
+                    // Auto-llenar algunos campos
+        paymentForm.amount = calculateTotalAmount();
         } else {
             userData.value = null;
             notify({
@@ -102,17 +107,17 @@ const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
         imageFile.value = file;
-        form.image = file;
+        paymentForm.image = file;
     }
 };
 
 const setTodayDate = () => {
     const today = new Date();
-    form.payment_date = today.toISOString().split('T')[0];
+    paymentForm.payment_date = today.toISOString().split('T')[0];
 };
 
 const clearForm = () => {
-    form.reset();
+    paymentForm.reset();
     imageFile.value = null;
 };
 
@@ -126,25 +131,57 @@ const submitPayment = () => {
         return;
     }
 
-    form.user_id = userData.value.id;
+    // Asignar el user_id al formulario
+    paymentForm.user_id = userData.value.id;
 
-    form.post(route('payments.store'), {
-        onSuccess: () => {
-            notify({
-                message: 'Pago reportado exitosamente',
-                type: 'success',
-                duration: 2000,
-            });
-            emit('update:open', false);
-            resetModal();
+    paymentForm.post(route('quick-payment.store'), {
+                onSuccess: (page) => {
+            // Extraer los mensajes de la sesión flash
+            const successMessage = page.props?.flash?.success;
+            const errorMessage = page.props?.flash?.error;
+
+            if (successMessage) {
+                notify({
+                    message: successMessage,
+                    type: 'success',
+                    duration: 3000,
+                });
+                emit('update:open', false);
+                resetModal();
+            } else if (errorMessage) {
+                notify({
+                    message: errorMessage,
+                    type: 'error',
+                    duration: 4000,
+                });
+            } else {
+                notify({
+                    message: 'Pago registrado exitosamente',
+                    type: 'success',
+                    duration: 3000,
+                });
+                emit('update:open', false);
+                resetModal();
+            }
         },
         onError: (errors) => {
-            const firstError = Object.values(errors)[0];
-            notify({
-                message: Array.isArray(firstError) ? firstError[0] : firstError,
-                type: 'error',
-                duration: 3000,
-            });
+            console.error('Errores de validación:', errors);
+
+            // Mostrar errores específicos de validación si existen
+            if (errors && Object.keys(errors).length > 0) {
+                const firstError = Object.values(errors)[0];
+                notify({
+                    message: Array.isArray(firstError) ? firstError[0] : firstError,
+                    type: 'error',
+                    duration: 4000,
+                });
+            } else {
+                notify({
+                    message: 'Error al procesar el pago. Revise los datos ingresados.',
+                    type: 'error',
+                    duration: 3000,
+                });
+            }
         },
     });
 };
@@ -181,7 +218,7 @@ const handleOpenChange = (open: boolean) => {
                         id="search_code"
                         v-model="searchCode"
                         placeholder="Ingrese el código del cliente"
-                        :disabled="form.processing"
+                        :disabled="paymentForm.processing"
                     />
                     <div v-if="searchLoading" class="text-sm text-gray-500">
                         Buscando...
@@ -198,7 +235,7 @@ const handleOpenChange = (open: boolean) => {
                         <div><strong>Plan:</strong> {{ userData.plan?.name }} (${{ userData.plan?.price }})</div>
                         <div class="col-span-2">
                             <strong>Deuda Total:</strong>
-                            <span class="text-red-600 font-bold">
+                            <span :class="userData.total_debt > 0 ? 'text-red-600 font-bold' : 'text-green-600 font-bold'">
                                 ${{ userData.total_debt }}
                                 <span v-if="bcv">({{ (userData.total_debt * parseFloat(bcv)).toFixed(2) }} Bs)</span>
                             </span>
@@ -216,15 +253,25 @@ const handleOpenChange = (open: boolean) => {
                     </div>
                 </div>
 
+                <!-- Mensaje de sin deuda -->
+                <div v-if="userData && userData.total_debt <= 0" class="bg-green-50 p-4 rounded-lg text-center">
+                    <div class="text-green-600 font-semibold">
+                        ✅ Este contrato no tiene deuda pendiente
+                    </div>
+                    <div class="text-sm text-green-500 mt-1">
+                        El cliente está al día con sus pagos
+                    </div>
+                </div>
+
                 <!-- Formulario de pago -->
-                <div v-if="userData" class="space-y-4">
+                <div v-if="userData && userData.total_debt > 0" class="space-y-4">
                     <div class="space-y-2">
                         <Label for="reference">Referencia del Pago</Label>
                         <Input
                             id="reference"
-                            v-model="form.reference"
+                            v-model="paymentForm.reference"
                             placeholder="Número de referencia del pago"
-                            :disabled="form.processing"
+                            :disabled="paymentForm.processing"
                         />
                     </div>
 
@@ -233,9 +280,9 @@ const handleOpenChange = (open: boolean) => {
                             <Label for="nationality">Nacionalidad</Label>
                             <select
                                 id="nationality"
-                                v-model="form.nationality"
+                                v-model="paymentForm.nationality"
                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                :disabled="form.processing"
+                                :disabled="paymentForm.processing"
                             >
                                 <option value="V">V - Venezolano</option>
                                 <option value="E">E - Extranjero</option>
@@ -247,9 +294,9 @@ const handleOpenChange = (open: boolean) => {
                             <Label for="id_number">Cédula/RIF</Label>
                             <Input
                                 id="id_number"
-                                v-model="form.id_number"
+                                v-model="paymentForm.id_number"
                                 placeholder="Número de cédula o RIF"
-                                :disabled="form.processing"
+                                :disabled="paymentForm.processing"
                             />
                         </div>
                     </div>
@@ -257,21 +304,30 @@ const handleOpenChange = (open: boolean) => {
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
                             <Label for="bank">Banco</Label>
-                            <Input
+                            <select
                                 id="bank"
-                                v-model="form.bank"
-                                placeholder="Banco emisor del pago"
-                                :disabled="form.processing"
-                            />
+                                v-model="paymentForm.bank"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                :disabled="paymentForm.processing"
+                            >
+                                <option value="">Seleccione un banco</option>
+                                <option
+                                    v-for="bank in getBankOptions()"
+                                    :key="bank.value"
+                                    :value="bank.value"
+                                >
+                                    {{ bank.label }}
+                                </option>
+                            </select>
                         </div>
 
                         <div class="space-y-2">
                             <Label for="phone">Teléfono</Label>
                             <Input
                                 id="phone"
-                                v-model="form.phone"
+                                v-model="paymentForm.phone"
                                 placeholder="Teléfono asociado al pago"
-                                :disabled="form.processing"
+                                :disabled="paymentForm.processing"
                             />
                         </div>
                     </div>
@@ -283,9 +339,9 @@ const handleOpenChange = (open: boolean) => {
                                 id="amount"
                                 type="number"
                                 step="0.01"
-                                v-model="form.amount"
+                                v-model="paymentForm.amount"
                                 :placeholder="`Monto sugerido: ${calculateTotalAmount()}`"
-                                :disabled="form.processing"
+                                :disabled="paymentForm.processing"
                             />
                         </div>
 
@@ -295,8 +351,8 @@ const handleOpenChange = (open: boolean) => {
                                 <Input
                                     id="payment_date"
                                     type="date"
-                                    v-model="form.payment_date"
-                                    :disabled="form.processing"
+                                    v-model="paymentForm.payment_date"
+                                    :disabled="paymentForm.processing"
                                     class="flex-1"
                                 />
                                 <Button
@@ -318,7 +374,7 @@ const handleOpenChange = (open: boolean) => {
                             type="file"
                             accept="image/*"
                             @change="handleImageUpload"
-                            :disabled="form.processing"
+                            :disabled="paymentForm.processing"
                         />
                         <div v-if="imageFile" class="text-sm text-green-600">
                             ✓ Imagen seleccionada: {{ imageFile.name }}
@@ -327,15 +383,15 @@ const handleOpenChange = (open: boolean) => {
                 </div>
             </div>
 
-            <DialogFooter v-if="userData">
+            <DialogFooter v-if="userData && userData.total_debt > 0">
                 <DialogClose asChild>
                     <Button variant="outline">Cancelar</Button>
                 </DialogClose>
                 <Button
                     @click="submitPayment"
-                    :disabled="form.processing || !form.reference || !form.amount"
+                    :disabled="paymentForm.processing || !paymentForm.reference || !paymentForm.amount"
                 >
-                    {{ form.processing ? 'Procesando...' : 'Registrar Pago' }}
+                    {{ paymentForm.processing ? 'Procesando...' : 'Registrar Pago' }}
                 </Button>
             </DialogFooter>
         </DialogContent>

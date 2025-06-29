@@ -28,6 +28,9 @@ Route::resource('zones', ZoneController::class);
 //payments
 Route::resource('payments', PaymentController::class)->middleware('auth');
 
+// Ruta especial para pago rápido desde login (sin autenticación)
+Route::post('/quick-payment', [PaymentController::class, 'store'])->name('quick-payment.store');
+
 
 Route::get('/api/bcv', function () {
     return response()->json(BncHelper::getBcvRatesCached());
@@ -68,6 +71,8 @@ Route::get('/api/bnc/history', function (Request $request) {
 Route::get('/api/bnc/validate-reference/{reference}', [App\Http\Controllers\PaymentController::class, 'validateReference'])->middleware(['auth']);
 
 Route::get('/api/users/search/{code}', [App\Http\Controllers\UserController::class, 'searchByCode']);
+
+Route::get('/api/banks', [App\Http\Controllers\PaymentController::class, 'getBanks']);
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');

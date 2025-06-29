@@ -35,4 +35,16 @@ class Invoice extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    //user belongs to invoice
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    //plan belongs to invoice
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
 }
