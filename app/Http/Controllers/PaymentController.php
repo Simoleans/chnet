@@ -13,9 +13,57 @@ class PaymentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $query = Payment::with(['user', 'invoice'])->orderBy('id', 'desc');
+
+        // Filtro de búsqueda por referencia o código de abonado
+        if ($request->has('search') && $request->search) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('reference', 'like', '%' . $searchTerm . '%')
+                  ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                      $userQuery->where('code', 'like', '%' . $searchTerm . '%');
+                  });
+            });
+        }
+
+        $payments = $query->paginate(15)->appends($request->query());
+
+        // Formatear los datos para la vista
+        $formattedPayments = $payments->getCollection()->map(function ($payment) {
+            return [
+                'id' => $payment->id,
+                'reference' => $payment->reference,
+                'amount' => $payment->amount,
+                'amount_bs' => $payment->amount * (\App\Helpers\BncHelper::getBcvRatesCached()['Rate'] ?? 1),
+                'payment_date' => $payment->payment_date ? $payment->payment_date->format('d/m/Y') : null,
+                'bank' => $payment->bank,
+                'phone' => $payment->phone,
+                'id_number' => $payment->id_number,
+                'user_name' => $payment->user ? $payment->user->name : 'N/A',
+                'user_code' => $payment->user ? $payment->user->code : 'N/A',
+                'invoice_period' => $payment->invoice && $payment->invoice->period ?
+                    $payment->invoice->period->format('Y-m') : 'Sin factura',
+                'created_at' => $payment->created_at ? $payment->created_at->format('d/m/Y H:i') : null,
+                'image_path' => $payment->image_path,
+            ];
+        });
+
+        return \Inertia\Inertia::render('Payments/Index', [
+            'data' => $formattedPayments,
+            'pagination' => [
+                'current_page' => $payments->currentPage(),
+                'last_page' => $payments->lastPage(),
+                'per_page' => $payments->perPage(),
+                'total' => $payments->total(),
+                'from' => $payments->firstItem(),
+                'to' => $payments->lastItem(),
+            ],
+            'filters' => [
+                'search' => $request->search ?? '',
+            ],
+        ]);
     }
 
     /**
