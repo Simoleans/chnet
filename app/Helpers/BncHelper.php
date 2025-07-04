@@ -223,6 +223,7 @@ class BncHelper
         try {
             $key = self::getWorkingKey();
             $clientId = config('app.bnc.client_id');
+            Log::info('BNC BANCOS 🆔 ClientID: ' . $clientId);
 
             if (!$key) throw new \Exception('WorkingKey no disponible');
 
