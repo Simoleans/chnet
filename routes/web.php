@@ -351,6 +351,40 @@ Route::get('/api/test-bnc-channel-only', function () {
     }
 });
 
+// Endpoint sin logging para evitar conflicto de Monolog
+Route::get('/api/banks-no-log', function() {
+    try {
+        // Verificar configuraciones básicas
+        $clientId = config('app.bnc.client_id');
+        $baseUrl = config('app.bnc.base_url');
+        $clientGuid = config('app.bnc.client_guid');
+        $masterKey = config('app.bnc.master_key');
+
+        if (empty($clientId) || empty($baseUrl) || empty($clientGuid) || empty($masterKey)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Configuración BNC incompleta'
+            ], 500);
+        }
+
+        // Obtener banks usando BncHelper pero sin ningún log
+        $banks = \App\Helpers\BncHelper::getBanks();
+
+        return response()->json([
+            'success' => true,
+            'data' => $banks
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Error en getBanks: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], 500);
+    }
+});
+
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
