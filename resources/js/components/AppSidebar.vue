@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Package, Users, MapPin } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, Package, Users, MapPin, CreditCard } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { usePage } from '@inertiajs/vue3';
 const page = usePage();
@@ -21,19 +21,25 @@ const mainNavItems: NavItem[] = [
         title: 'Planes',
         href: '/plans',
         icon: Package,
-        show: page.props.auth.user.role === 1
+        show: true
     },
     {
         title: 'Usuarios',
         href: '/users',
         icon: Users,
-        show: page.props.auth.user.role === 1
+        show: true
     },
     {
         title: 'Zonas',
         href: '/zones',
         icon: MapPin,
-        show: page.props.auth.user.role === 1
+        show: true
+    },
+    {
+        title: 'Pagos',
+        href: '/payments',
+        icon: CreditCard,
+        show: true
     },
 ];
 
