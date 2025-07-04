@@ -219,13 +219,17 @@ class BncHelper
         return null;
     }
 
-        public static function getBanks(): ?array
+    public static function getBanks(): ?array
     {
         try {
+            // Log sin emojis y dentro del try-catch
+            Log::info('BNC BANCOS: Iniciando getBanks');
+
             // Paso 1: Obtener WorkingKey
             $key = self::getWorkingKey();
 
             if (!$key) {
+                Log::error('BNC BANCOS: WorkingKey no disponible');
                 throw new \Exception('WorkingKey no disponible');
             }
 
@@ -234,6 +238,7 @@ class BncHelper
             $baseUrl = config('app.bnc.base_url');
 
             if (empty($clientId)) {
+                Log::error('BNC BANCOS: BNC_CLIENT_ID no configurado');
                 throw new \Exception('BNC_CLIENT_ID no está configurado');
             }
 
@@ -244,59 +249,49 @@ class BncHelper
                 'BranchID' => '',
             ];
 
+            Log::info('BNC BANCOS: Payload preparado', $body);
+
             // Paso 4: Verificar dependencias de cifrado
             if (!class_exists('App\Helpers\BncCryptoHelper')) {
+                Log::error('BNC BANCOS: BncCryptoHelper no encontrado');
                 throw new \Exception('BncCryptoHelper no encontrado');
             }
 
             if (!class_exists('phpseclib3\Crypt\AES')) {
+                Log::error('BNC BANCOS: phpseclib3 no instalado');
                 throw new \Exception('phpseclib3 no está instalado - ejecutar composer install');
             }
 
             // Paso 5: Enviar petición
+            Log::info('BNC BANCOS: Enviando peticion a BNC API');
             $response = BncApiService::send('Services/Banks', $body);
+
+            Log::info('BNC BANCOS: Respuesta recibida - Status: ' . $response->status());
 
             // Paso 6: Procesar respuesta
             if ($response->ok() || $response->status() === 202) {
                 $result = $response->json();
 
                 if (!isset($result['value'])) {
+                    Log::error('BNC BANCOS: Respuesta sin campo value');
                     return null;
                 }
 
                 // Paso 7: Desencriptar
                 $decrypted = BncCryptoHelper::decryptAES($result['value'], $key);
 
+                Log::info('BNC BANCOS: Desencriptacion exitosa - ' . count($decrypted) . ' bancos obtenidos');
                 return $decrypted;
+            } else {
+                Log::error('BNC BANCOS: Error HTTP - Status: ' . $response->status());
             }
 
         } catch (\Throwable $e) {
-            // Sin logs para debugging
+            Log::error('BNC BANCOS: Excepcion - ' . $e->getMessage());
+            Log::error('BNC BANCOS: File: ' . $e->getFile() . ' Line: ' . $e->getLine());
         }
 
         return null;
-
-        /*
-        // Ejemplo de respuesta desencriptada:
-        return [
-            [
-                "Name" => "Banco Central de Venezuela",
-                "Code" => "0001",
-                "Services" => "TRF"
-            ],
-            [
-                "Name" => "Banco de Venezuela",
-                "Code" => "0102",
-                "Services" => "TRF, P2P"
-            ],
-            [
-                "Name" => "Banco Venezolano de Crédito",
-                "Code" => "0104",
-                "Services" => "TRF, P2P"
-            ],
-            // ...
-        ];
-        */
     }
 
 
