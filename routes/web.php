@@ -192,6 +192,86 @@ Route::get('/api/test-working-key', function () {
     }
 });
 
+// Prueba 6: Diagnosticar BncLogger específicamente
+Route::get('/api/test-bnc-logger-detail', function () {
+    try {
+        // Verificar si la clase existe
+        if (!class_exists('App\Helpers\BncLogger')) {
+            return response()->json(['success' => false, 'error' => 'BncLogger class not found']);
+        }
+
+        // Verificar si el canal 'bnc' está configurado
+        $channels = config('logging.channels');
+        if (!isset($channels['bnc'])) {
+            return response()->json(['success' => false, 'error' => 'BNC logging channel not configured']);
+        }
+
+        // Verificar permisos del directorio de logs
+        $logDir = storage_path('logs');
+        if (!is_writable($logDir)) {
+            return response()->json(['success' => false, 'error' => 'Logs directory not writable']);
+        }
+
+        // Intentar crear el archivo de log manualmente
+        $logFile = storage_path('logs/bnc.log');
+        if (!file_exists($logFile)) {
+            file_put_contents($logFile, '');
+        }
+
+        if (!is_writable($logFile)) {
+            return response()->json(['success' => false, 'error' => 'BNC log file not writable']);
+        }
+
+        // Intentar usar el canal directamente
+        Log::channel('bnc')->info('Test directo del canal BNC');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Canal BNC funciona directamente',
+            'log_file_size' => filesize($logFile)
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Error en diagnóstico BncLogger: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+// Prueba 7: Usar logging normal en lugar de BncLogger
+Route::get('/api/test-without-bnc-logger', function () {
+    try {
+                // Usar Log normal en lugar de BncLogger
+        Log::info('Test sin BncLogger - iniciando getBanks');
+
+        $key = \App\Helpers\BncHelper::getWorkingKey();
+
+        Log::info('Test sin BncLogger - working key obtenida', [
+            'key_exists' => !is_null($key),
+            'key_length' => $key ? strlen($key) : 0
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Funciona sin BncLogger',
+            'key_exists' => !is_null($key),
+            'key_length' => $key ? strlen($key) : 0
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Error sin BncLogger: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], 500);
+    }
+});
+
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
