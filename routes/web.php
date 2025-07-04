@@ -248,18 +248,18 @@ Route::get('/api/test-without-bnc-logger', function () {
                 // Usar Log normal en lugar de BncLogger
         Log::info('Test sin BncLogger - iniciando getBanks');
 
-        $key = \App\Helpers\BncHelper::getWorkingKey();
+        /* $key = \App\Helpers\BncHelper::getWorkingKey();
 
         Log::info('Test sin BncLogger - working key obtenida', [
             'key_exists' => !is_null($key),
             'key_length' => $key ? strlen($key) : 0
-        ]);
+        ]); */
 
         return response()->json([
             'success' => true,
             'message' => 'Funciona sin BncLogger',
-            'key_exists' => !is_null($key),
-            'key_length' => $key ? strlen($key) : 0
+            /* 'key_exists' => !is_null($key),
+            'key_length' => $key ? strlen($key) : 0 */
         ]);
 
     } catch (\Exception $e) {
