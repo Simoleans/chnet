@@ -27,7 +27,7 @@ class BncApiService
             'WorkingKey' => $workingKey,
         ];
 
-        Log::info('BNC API SERVICE 📤 Enviando (desencriptado): ' . json_encode($payload,JSON_PRETTY_PRINT));
+        //Log::info('BNC API SERVICE 📤 Enviando (desencriptado): ' . json_encode($payload,JSON_PRETTY_PRINT));
 
         return Http::post(config('app.bnc.base_url') . $endpoint, $payload);
     }
