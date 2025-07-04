@@ -352,7 +352,7 @@ Route::get('/api/test-bnc-channel-only', function () {
 });
 
 // Endpoint sin logging para evitar conflicto de Monolog
-Route::get('/api/banks-no-log', function() {
+/* Route::get('/api/banks-no-log', function() {
     try {
         // Verificar configuraciones básicas
         $clientId = config('app.bnc.client_id');
@@ -383,7 +383,7 @@ Route::get('/api/banks-no-log', function() {
             'line' => $e->getLine(),
         ], 500);
     }
-});
+}); */
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
