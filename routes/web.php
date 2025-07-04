@@ -245,7 +245,7 @@ Route::get('/api/test-bnc-logger-detail', function () {
 // Prueba 7: Usar logging normal en lugar de BncLogger
 Route::get('/api/test-without-bnc-logger', function () {
     try {
-                // Usar Log normal en lugar de BncLogger
+        // Usar Log normal en lugar de BncLogger
         Log::info('Test sin BncLogger - iniciando getBanks');
 
         /* $key = \App\Helpers\BncHelper::getWorkingKey();
@@ -268,6 +268,85 @@ Route::get('/api/test-without-bnc-logger', function () {
             'error' => 'Error sin BncLogger: ' . $e->getMessage(),
             'file' => $e->getFile(),
             'line' => $e->getLine(),
+        ], 500);
+    }
+});
+
+// Prueba 8: Verificar paso a paso el problema del canal BNC
+Route::get('/api/test-logging-step-by-step', function () {
+    try {
+        // Paso 1: Log normal debe funcionar
+        Log::info('PASO 1: Log normal funciona');
+
+        // Paso 2: Verificar que la configuración del canal existe
+        $channels = config('logging.channels');
+        if (!isset($channels['bnc'])) {
+            return response()->json(['success' => false, 'error' => 'Canal BNC no configurado', 'step' => 2]);
+        }
+
+        // Paso 3: Verificar configuración del canal específicamente
+        $bncConfig = $channels['bnc'];
+        if (empty($bncConfig['path'])) {
+            return response()->json(['success' => false, 'error' => 'Path del canal BNC vacío', 'step' => 3]);
+        }
+
+        // Paso 4: Verificar permisos del directorio
+        $logDir = dirname($bncConfig['path']);
+        if (!is_dir($logDir)) {
+            return response()->json(['success' => false, 'error' => 'Directorio de logs no existe', 'step' => 4, 'dir' => $logDir]);
+        }
+
+        if (!is_writable($logDir)) {
+            return response()->json(['success' => false, 'error' => 'Directorio de logs no escribible', 'step' => 4, 'dir' => $logDir]);
+        }
+
+        // Paso 5: Crear archivo manualmente si no existe
+        if (!file_exists($bncConfig['path'])) {
+            file_put_contents($bncConfig['path'], '');
+        }
+
+        if (!is_writable($bncConfig['path'])) {
+            return response()->json(['success' => false, 'error' => 'Archivo de log no escribible', 'step' => 5, 'file' => $bncConfig['path']]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Todos los pasos OK hasta aquí',
+            'bnc_config' => $bncConfig,
+            'file_exists' => file_exists($bncConfig['path']),
+            'file_writable' => is_writable($bncConfig['path']),
+            'dir_writable' => is_writable($logDir)
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Error en verificación paso a paso: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+// Prueba 9: Intentar usar el canal BNC después de verificaciones
+Route::get('/api/test-bnc-channel-only', function () {
+    try {
+        // Intentar usar solo el canal BNC sin ninguna clase custom
+        Log::channel('bnc')->info('Test directo del canal BNC desde endpoint');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Canal BNC funciona directamente'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Error en canal BNC: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
         ], 500);
     }
 });

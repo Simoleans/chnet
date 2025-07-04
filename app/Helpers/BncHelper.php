@@ -221,32 +221,17 @@ class BncHelper
 
         public static function getBanks(): ?array
     {
-        BncLogger::startOperation('getBanks()');
-
         try {
             // Paso 1: Obtener WorkingKey
-            BncLogger::step(1, 'Obteniendo WorkingKey');
             $key = self::getWorkingKey();
 
             if (!$key) {
-                BncLogger::failure('WorkingKey no disponible - verificar comando bnc:refresh-working-key');
                 throw new \Exception('WorkingKey no disponible');
             }
-
-            BncLogger::workingKey('Obtenida exitosamente', [
-                'key_length' => strlen($key),
-                'key_preview' => substr($key, 0, 8) . '...' . substr($key, -8)
-            ]);
 
             // Paso 2: Obtener configuraciones
             $clientId = config('app.bnc.client_id');
             $baseUrl = config('app.bnc.base_url');
-
-            BncLogger::configuration('Configuraciones obtenidas', [
-                'client_id' => $clientId,
-                'base_url' => $baseUrl,
-                'endpoint_completo' => $baseUrl . 'Services/Banks'
-            ]);
 
             if (empty($clientId)) {
                 throw new \Exception('BNC_CLIENT_ID no está configurado');
@@ -259,8 +244,6 @@ class BncHelper
                 'BranchID' => '',
             ];
 
-            BncLogger::step(3, 'Payload preparado', ['body' => $body]);
-
             // Paso 4: Verificar dependencias de cifrado
             if (!class_exists('App\Helpers\BncCryptoHelper')) {
                 throw new \Exception('BncCryptoHelper no encontrado');
@@ -270,66 +253,27 @@ class BncHelper
                 throw new \Exception('phpseclib3 no está instalado - ejecutar composer install');
             }
 
-            BncLogger::step(4, 'Dependencias de cifrado verificadas');
-
             // Paso 5: Enviar petición
-            BncLogger::step(5, 'Enviando petición al BNC');
-            BncLogger::apiRequest('Services/Banks', $body);
-
             $response = BncApiService::send('Services/Banks', $body);
-
-            BncLogger::apiResponse($response->status(), [
-                'headers' => $response->headers(),
-                'body_length' => strlen($response->body()),
-                'body_preview' => substr($response->body(), 0, 200) . '...'
-            ]);
 
             // Paso 6: Procesar respuesta
             if ($response->ok() || $response->status() === 202) {
                 $result = $response->json();
 
-                BncLogger::step(6, 'JSON parseado', [
-                    'tiene_status' => isset($result['status']),
-                    'status_valor' => $result['status'] ?? 'N/A',
-                    'tiene_value' => isset($result['value']),
-                    'keys_disponibles' => array_keys($result ?? [])
-                ]);
-
                 if (!isset($result['value'])) {
-                    BncLogger::failure('Respuesta sin campo "value"', [
-                        'respuesta_completa' => $result
-                    ]);
                     return null;
                 }
 
                 // Paso 7: Desencriptar
-                BncLogger::step(7, 'Desencriptando respuesta');
-                BncLogger::encryption('Iniciando desencriptación');
-
                 $decrypted = BncCryptoHelper::decryptAES($result['value'], $key);
-
-                BncLogger::success('Desencriptación exitosa', [
-                    'tipo_resultado' => gettype($decrypted),
-                    'es_array' => is_array($decrypted),
-                    'cantidad_items' => is_array($decrypted) ? count($decrypted) : 'N/A',
-                    'primeros_elementos' => is_array($decrypted) ? array_slice($decrypted, 0, 2) : 'N/A'
-                ]);
 
                 return $decrypted;
             }
 
-            // Error HTTP
-            BncLogger::failure('Error HTTP en respuesta', [
-                'status' => $response->status(),
-                'reason' => $response->reason(),
-                'body' => $response->body()
-            ]);
-
         } catch (\Throwable $e) {
-            BncLogger::exception($e, 'getBanks()');
+            // Sin logs para debugging
         }
 
-        BncLogger::warning('Retornando null - proceso falló');
         return null;
 
         /*

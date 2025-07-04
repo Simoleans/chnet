@@ -350,12 +350,12 @@ class PaymentController extends Controller
         }
     }
 
-        /**
+            /**
      * Obtiene la lista de bancos desde el BNC
      */
     public function getBanks()
     {
-        BncLogger::info('PAYMENT CONTROLLER - Iniciando getBanks()');
+        Log::info('PAYMENT CONTROLLER - Iniciando getBanks()');
 
         try {
             // Verificar configuraciones básicas antes de proceder
@@ -364,7 +364,7 @@ class PaymentController extends Controller
             $clientGuid = config('app.bnc.client_guid');
             $masterKey = config('app.bnc.master_key');
 
-            BncLogger::configuration('PAYMENT CONTROLLER - Verificando configuraciones BNC', [
+            Log::info('PAYMENT CONTROLLER - Verificando configuraciones BNC', [
                 'client_id_presente' => !empty($clientId),
                 'base_url_presente' => !empty($baseUrl),
                 'client_guid_presente' => !empty($clientGuid),
@@ -373,37 +373,43 @@ class PaymentController extends Controller
             ]);
 
             if (empty($clientId) || empty($baseUrl) || empty($clientGuid) || empty($masterKey)) {
-                BncLogger::error('PAYMENT CONTROLLER - Faltan configuraciones BNC críticas');
+                Log::error('PAYMENT CONTROLLER - Faltan configuraciones BNC críticas');
                 return response()->json([
                     'success' => false,
                     'error' => 'Configuración BNC incompleta'
                 ], 500);
             }
 
-            BncLogger::info('PAYMENT CONTROLLER - Llamando a BncHelper::getBanks()');
+            Log::info('PAYMENT CONTROLLER - Llamando a BncHelper::getBanks()');
             $banks = BncHelper::getBanks();
 
-            BncLogger::info('PAYMENT CONTROLLER - Respuesta de BncHelper::getBanks()', [
+            Log::info('PAYMENT CONTROLLER - Respuesta de BncHelper::getBanks()', [
                 'resultado_es_null' => is_null($banks),
                 'resultado_es_array' => is_array($banks),
                 'cantidad_bancos' => is_array($banks) ? count($banks) : 'N/A',
             ]);
 
             if (!$banks) {
-                BncLogger::warning('PAYMENT CONTROLLER - BncHelper retornó null');
+                Log::warning('PAYMENT CONTROLLER - BncHelper retornó null');
                 return response()->json([
                     'success' => false,
                     'message' => 'No se pudo obtener la lista de bancos'
                 ]);
             }
 
-            BncLogger::success('PAYMENT CONTROLLER - Retornando bancos exitosamente');
+            Log::info('PAYMENT CONTROLLER - Retornando bancos exitosamente');
             return response()->json([
                 'success' => true,
                 'data' => $banks
             ]);
         } catch (\Throwable $e) {
-            BncLogger::exception($e, 'PAYMENT CONTROLLER - getBanks()');
+            Log::error('PAYMENT CONTROLLER - Error obteniendo bancos', [
+                'mensaje' => $e->getMessage(),
+                'archivo' => $e->getFile(),
+                'linea' => $e->getLine(),
+                'clase' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
